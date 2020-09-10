@@ -58,8 +58,8 @@ func TestStoreCapture(t *testing.T) {
 		rstack   = newReturnStack()
 		contract = NewContract(&dummyContractRef{}, &dummyContractRef{}, new(big.Int), 0)
 	)
-	stack.push(uint256.NewInt().SetUint64(1))
-	stack.push(uint256.NewInt())
+	stack.push(*uint256.NewInt().SetUint64(1))
+	stack.push(*uint256.NewInt())
 	var index common.Hash
 	logger.CaptureState(env, 0, SSTORE, 0, 0, mem, stack, rstack, nil, contract, 0, nil)
 	if len(logger.storage[contract.Address()]) == 0 {

@@ -599,6 +599,8 @@ func benchmarkNonModifyingCode(gas uint64, code []byte, name string, b *testing.
 	cfg.State.SetCode(destination, code)
 	vmenv.Call(sender, destination, nil, gas, cfg.Value)
 
+	b.ResetTimer()
+
 	b.Run(name, func(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
@@ -642,37 +644,37 @@ func BenchmarkSimpleLoop(b *testing.B) {
 		byte(vm.JUMP),
 	}
 
-	callInexistant := []byte{
-		byte(vm.JUMPDEST), //  [ count ]
-		// push args for the call
-		byte(vm.PUSH1), 0, // out size
-		byte(vm.DUP1),        // out offset
-		byte(vm.DUP1),        // out insize
-		byte(vm.DUP1),        // in offset
-		byte(vm.DUP1),        // value
-		byte(vm.PUSH1), 0xff, // address of existing contract
-		byte(vm.GAS), // gas
-		byte(vm.CALL),
-		byte(vm.POP),      // pop return value
-		byte(vm.PUSH1), 0, // jumpdestination
-		byte(vm.JUMP),
-	}
+	// callInexistant := []byte{
+	// 	byte(vm.JUMPDEST), //  [ count ]
+	// 	// push args for the call
+	// 	byte(vm.PUSH1), 0, // out size
+	// 	byte(vm.DUP1),        // out offset
+	// 	byte(vm.DUP1),        // out insize
+	// 	byte(vm.DUP1),        // in offset
+	// 	byte(vm.DUP1),        // value
+	// 	byte(vm.PUSH1), 0xff, // address of existing contract
+	// 	byte(vm.GAS), // gas
+	// 	byte(vm.CALL),
+	// 	byte(vm.POP),      // pop return value
+	// 	byte(vm.PUSH1), 0, // jumpdestination
+	// 	byte(vm.JUMP),
+	// }
 
-	callEOA := []byte{
-		byte(vm.JUMPDEST), //  [ count ]
-		// push args for the call
-		byte(vm.PUSH1), 0, // out size
-		byte(vm.DUP1),        // out offset
-		byte(vm.DUP1),        // out insize
-		byte(vm.DUP1),        // in offset
-		byte(vm.DUP1),        // value
-		byte(vm.PUSH1), 0xE0, // address of EOA
-		byte(vm.GAS), // gas
-		byte(vm.CALL),
-		byte(vm.POP),      // pop return value
-		byte(vm.PUSH1), 0, // jumpdestination
-		byte(vm.JUMP),
-	}
+	// callEOA := []byte{
+	// 	byte(vm.JUMPDEST), //  [ count ]
+	// 	// push args for the call
+	// 	byte(vm.PUSH1), 0, // out size
+	// 	byte(vm.DUP1),        // out offset
+	// 	byte(vm.DUP1),        // out insize
+	// 	byte(vm.DUP1),        // in offset
+	// 	byte(vm.DUP1),        // value
+	// 	byte(vm.PUSH1), 0xE0, // address of EOA
+	// 	byte(vm.GAS), // gas
+	// 	byte(vm.CALL),
+	// 	byte(vm.POP),      // pop return value
+	// 	byte(vm.PUSH1), 0, // jumpdestination
+	// 	byte(vm.JUMP),
+	// }
 
 	loopingCode := []byte{
 		byte(vm.JUMPDEST), //  [ count ]
@@ -689,21 +691,21 @@ func BenchmarkSimpleLoop(b *testing.B) {
 		byte(vm.JUMP),
 	}
 
-	calllRevertingContractWithInput := []byte{
-		byte(vm.JUMPDEST), //
-		// push args for the call
-		byte(vm.PUSH1), 0, // out size
-		byte(vm.DUP1),        // out offset
-		byte(vm.PUSH1), 0x20, // in size
-		byte(vm.PUSH1), 0x00, // in offset
-		byte(vm.PUSH1), 0x00, // value
-		byte(vm.PUSH1), 0xEE, // address of reverting contract
-		byte(vm.GAS), // gas
-		byte(vm.CALL),
-		byte(vm.POP),      // pop return value
-		byte(vm.PUSH1), 0, // jumpdestination
-		byte(vm.JUMP),
-	}
+	// calllRevertingContractWithInput := []byte{
+	// 	byte(vm.JUMPDEST), //
+	// 	// push args for the call
+	// 	byte(vm.PUSH1), 0, // out size
+	// 	byte(vm.DUP1),        // out offset
+	// 	byte(vm.PUSH1), 0x20, // in size
+	// 	byte(vm.PUSH1), 0x00, // in offset
+	// 	byte(vm.PUSH1), 0x00, // value
+	// 	byte(vm.PUSH1), 0xEE, // address of reverting contract
+	// 	byte(vm.GAS), // gas
+	// 	byte(vm.CALL),
+	// 	byte(vm.POP),      // pop return value
+	// 	byte(vm.PUSH1), 0, // jumpdestination
+	// 	byte(vm.JUMP),
+	// }
 
 	//tracer := vm.NewJSONLogger(nil, os.Stdout)
 	//Execute(loopingCode, nil, &Config{
@@ -715,10 +717,30 @@ func BenchmarkSimpleLoop(b *testing.B) {
 	benchmarkNonModifyingCode(100000000, staticCallIdentity, "staticcall-identity-100M", b)
 	benchmarkNonModifyingCode(100000000, callIdentity, "call-identity-100M", b)
 	benchmarkNonModifyingCode(100000000, loopingCode, "loop-100M", b)
-	benchmarkNonModifyingCode(100000000, callInexistant, "call-nonexist-100M", b)
-	benchmarkNonModifyingCode(100000000, callEOA, "call-EOA-100M", b)
-	benchmarkNonModifyingCode(100000000, calllRevertingContractWithInput, "call-reverting-100M", b)
+	// benchmarkNonModifyingCode(100000000, callInexistant, "call-nonexist-100M", b)
+	// benchmarkNonModifyingCode(100000000, callEOA, "call-EOA-100M", b)
+	// benchmarkNonModifyingCode(100000000, calllRevertingContractWithInput, "call-reverting-100M", b)
 
 	//benchmarkNonModifyingCode(10000000, staticCallIdentity, "staticcall-identity-10M", b)
 	//benchmarkNonModifyingCode(10000000, loopingCode, "loop-10M", b)
+}
+
+// This is a pure benchmark to Staticcall
+func BenchmarkEip2046(b *testing.B) {
+	staticCallIdentity := []byte{
+		byte(vm.JUMPDEST), //  [ count ]
+		// push args for the call
+		byte(vm.PUSH1), 0, // out size
+		byte(vm.DUP1),       // out offset
+		byte(vm.DUP1),       // out insize
+		byte(vm.DUP1),       // in offset
+		byte(vm.PUSH1), 0x4, // address of identity
+		byte(vm.GAS), // gas
+		byte(vm.STATICCALL),
+		byte(vm.POP),      // pop return value
+		byte(vm.PUSH1), 0, // jumpdestination
+		byte(vm.JUMP),
+	}
+
+	benchmarkNonModifyingCode(10000000, staticCallIdentity, "staticcall-identity-10M", b)
 }

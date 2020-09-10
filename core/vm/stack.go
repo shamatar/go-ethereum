@@ -23,9 +23,12 @@ import (
 	"github.com/holiman/uint256"
 )
 
+const limit = 2048
+
 var stackPool = sync.Pool{
 	New: func() interface{} {
-		return &Stack{data: make([]uint256.Int, 0, 16)}
+		st := new(Stack)
+		return st
 	},
 }
 
@@ -33,7 +36,8 @@ var stackPool = sync.Pool{
 // expected to be changed and modified. stack does not take care of adding newly
 // initialised objects.
 type Stack struct {
-	data []uint256.Int
+	data   [limit]uint256.Int
+	length int
 }
 
 func newstack() *Stack {
@@ -41,49 +45,53 @@ func newstack() *Stack {
 }
 
 func returnStack(s *Stack) {
-	s.data = s.data[:0]
+	s.length = 0
 	stackPool.Put(s)
 }
 
-// Data returns the underlying uint256.Int array.
+// Data returns the underlying uint256.Int slice
 func (st *Stack) Data() []uint256.Int {
-	return st.data
+	tmp := make([]uint256.Int, st.length)
+	copy(tmp, st.data[:st.length])
+	return tmp
 }
 
-func (st *Stack) push(d *uint256.Int) {
+func (st *Stack) push(d uint256.Int) {
 	// NOTE push limit (1024) is checked in baseCheck
-	st.data = append(st.data, *d)
+	st.data[st.length] = d
+	st.length++
 }
 func (st *Stack) pushN(ds ...uint256.Int) {
-	// FIXME: Is there a way to pass args by pointers.
-	st.data = append(st.data, ds...)
+	toAdd := len(ds)
+	copy(st.data[st.length:st.length+toAdd], ds)
+	st.length += toAdd
 }
 
 func (st *Stack) pop() (ret uint256.Int) {
-	ret = st.data[len(st.data)-1]
-	st.data = st.data[:len(st.data)-1]
+	ret = st.data[st.length-1]
+	st.length--
 	return
 }
 
 func (st *Stack) len() int {
-	return len(st.data)
+	return st.length
 }
 
 func (st *Stack) swap(n int) {
-	st.data[st.len()-n], st.data[st.len()-1] = st.data[st.len()-1], st.data[st.len()-n]
+	st.data[st.length-n], st.data[st.length-1] = st.data[st.length-1], st.data[st.length-n]
 }
 
 func (st *Stack) dup(n int) {
-	st.push(&st.data[st.len()-n])
+	st.push(st.data[st.length-n])
 }
 
 func (st *Stack) peek() *uint256.Int {
-	return &st.data[st.len()-1]
+	return &st.data[st.length-1]
 }
 
 // Back returns the n'th item in stack
 func (st *Stack) Back(n int) *uint256.Int {
-	return &st.data[st.len()-n-1]
+	return &st.data[st.length-n-1]
 }
 
 // Print dumps the content of the stack

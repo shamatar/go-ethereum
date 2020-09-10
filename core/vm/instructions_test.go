@@ -103,8 +103,8 @@ func testTwoOperandOp(t *testing.T, tests []TwoOperandTestcase, opFn executionFu
 		x := new(uint256.Int).SetBytes(common.Hex2Bytes(test.X))
 		y := new(uint256.Int).SetBytes(common.Hex2Bytes(test.Y))
 		expected := new(uint256.Int).SetBytes(common.Hex2Bytes(test.Expected))
-		stack.push(x)
-		stack.push(y)
+		stack.push(*x)
+		stack.push(*y)
 		opFn(&pc, evmInterpreter, &callCtx{nil, stack, rstack, nil})
 		if len(stack.data) != 1 {
 			t.Errorf("Expected one item on stack after %v, got %d: ", name, len(stack.data))
@@ -217,9 +217,9 @@ func TestAddMod(t *testing.T) {
 		y := new(uint256.Int).SetBytes(common.Hex2Bytes(test.y))
 		z := new(uint256.Int).SetBytes(common.Hex2Bytes(test.z))
 		expected := new(uint256.Int).SetBytes(common.Hex2Bytes(test.expected))
-		stack.push(z)
-		stack.push(y)
-		stack.push(x)
+		stack.push(*z)
+		stack.push(*y)
+		stack.push(*x)
 		opAddmod(&pc, evmInterpreter, &callCtx{nil, stack, nil, nil})
 		actual := stack.pop()
 		if actual.Cmp(expected) != 0 {
@@ -240,8 +240,8 @@ func getResult(args []*twoOperandParams, opFn executionFunc) []TwoOperandTestcas
 	for i, param := range args {
 		x := new(uint256.Int).SetBytes(common.Hex2Bytes(param.x))
 		y := new(uint256.Int).SetBytes(common.Hex2Bytes(param.y))
-		stack.push(x)
-		stack.push(y)
+		stack.push(*x)
+		stack.push(*y)
 		opFn(&pc, interpreter, &callCtx{nil, stack, rstack, nil})
 		actual := stack.pop()
 		result[i] = TwoOperandTestcase{param.x, param.y, fmt.Sprintf("%064x", actual)}
@@ -298,7 +298,7 @@ func opBenchmark(bench *testing.B, op executionFunc, args ...string) {
 		for _, arg := range byteArgs {
 			a := new(uint256.Int)
 			a.SetBytes(arg)
-			stack.push(a)
+			stack.push(*a)
 		}
 		op(&pc, evmInterpreter, &callCtx{nil, stack, rstack, nil})
 		stack.pop()

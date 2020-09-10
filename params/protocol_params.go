@@ -80,8 +80,9 @@ const (
 	TxDataNonZeroGasEIP2028  uint64 = 16    // Per byte of non zero data attached to a transaction after EIP 2028 (part in Istanbul)
 
 	// These have been changed during the course of the chain
-	CallGasFrontier              uint64 = 40  // Once per CALL operation & message call transaction.
-	CallGasEIP150                uint64 = 700 // Static portion of gas for CALL-derivates after EIP 150 (Tangerine)
+	CallGasFrontier uint64 = 40 // Once per CALL operation & message call transaction.
+	// CallGasEIP150                uint64 = 700 // Static portion of gas for CALL-derivates after EIP 150 (Tangerine)
+	CallGasEIP150                uint64 = 22  // Static portion of gas for CALL-derivates after EIP 150 (Tangerine)
 	BalanceGasFrontier           uint64 = 20  // The cost of a BALANCE operation
 	BalanceGasEIP150             uint64 = 400 // The cost of a BALANCE operation after Tangerine
 	BalanceGasEIP1884            uint64 = 700 // The cost of a BALANCE operation after EIP 1884 (part of Istanbul)

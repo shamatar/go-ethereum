@@ -252,7 +252,7 @@ func opSha3(pc *uint64, interpreter *EVMInterpreter, callContext *callCtx) ([]by
 	return nil, nil
 }
 func opAddress(pc *uint64, interpreter *EVMInterpreter, callContext *callCtx) ([]byte, error) {
-	callContext.stack.push(new(uint256.Int).SetBytes(callContext.contract.Address().Bytes()))
+	callContext.stack.push(*new(uint256.Int).SetBytes(callContext.contract.Address().Bytes()))
 	return nil, nil
 }
 
@@ -264,17 +264,17 @@ func opBalance(pc *uint64, interpreter *EVMInterpreter, callContext *callCtx) ([
 }
 
 func opOrigin(pc *uint64, interpreter *EVMInterpreter, callContext *callCtx) ([]byte, error) {
-	callContext.stack.push(new(uint256.Int).SetBytes(interpreter.evm.Origin.Bytes()))
+	callContext.stack.push(*new(uint256.Int).SetBytes(interpreter.evm.Origin.Bytes()))
 	return nil, nil
 }
 func opCaller(pc *uint64, interpreter *EVMInterpreter, callContext *callCtx) ([]byte, error) {
-	callContext.stack.push(new(uint256.Int).SetBytes(callContext.contract.Caller().Bytes()))
+	callContext.stack.push(*new(uint256.Int).SetBytes(callContext.contract.Caller().Bytes()))
 	return nil, nil
 }
 
 func opCallValue(pc *uint64, interpreter *EVMInterpreter, callContext *callCtx) ([]byte, error) {
 	v, _ := uint256.FromBig(callContext.contract.value)
-	callContext.stack.push(v)
+	callContext.stack.push(*v)
 	return nil, nil
 }
 
@@ -290,7 +290,7 @@ func opCallDataLoad(pc *uint64, interpreter *EVMInterpreter, callContext *callCt
 }
 
 func opCallDataSize(pc *uint64, interpreter *EVMInterpreter, callContext *callCtx) ([]byte, error) {
-	callContext.stack.push(new(uint256.Int).SetUint64(uint64(len(callContext.contract.Input))))
+	callContext.stack.push(*new(uint256.Int).SetUint64(uint64(len(callContext.contract.Input))))
 	return nil, nil
 }
 
@@ -313,7 +313,7 @@ func opCallDataCopy(pc *uint64, interpreter *EVMInterpreter, callContext *callCt
 }
 
 func opReturnDataSize(pc *uint64, interpreter *EVMInterpreter, callContext *callCtx) ([]byte, error) {
-	callContext.stack.push(new(uint256.Int).SetUint64(uint64(len(interpreter.returnData))))
+	callContext.stack.push(*new(uint256.Int).SetUint64(uint64(len(interpreter.returnData))))
 	return nil, nil
 }
 
@@ -348,7 +348,7 @@ func opExtCodeSize(pc *uint64, interpreter *EVMInterpreter, callContext *callCtx
 func opCodeSize(pc *uint64, interpreter *EVMInterpreter, callContext *callCtx) ([]byte, error) {
 	l := new(uint256.Int)
 	l.SetUint64(uint64(len(callContext.contract.Code)))
-	callContext.stack.push(l)
+	callContext.stack.push(*l)
 	return nil, nil
 }
 
@@ -426,7 +426,7 @@ func opExtCodeHash(pc *uint64, interpreter *EVMInterpreter, callContext *callCtx
 
 func opGasprice(pc *uint64, interpreter *EVMInterpreter, callContext *callCtx) ([]byte, error) {
 	v, _ := uint256.FromBig(interpreter.evm.GasPrice)
-	callContext.stack.push(v)
+	callContext.stack.push(*v)
 	return nil, nil
 }
 
@@ -453,30 +453,30 @@ func opBlockhash(pc *uint64, interpreter *EVMInterpreter, callContext *callCtx) 
 }
 
 func opCoinbase(pc *uint64, interpreter *EVMInterpreter, callContext *callCtx) ([]byte, error) {
-	callContext.stack.push(new(uint256.Int).SetBytes(interpreter.evm.Coinbase.Bytes()))
+	callContext.stack.push(*new(uint256.Int).SetBytes(interpreter.evm.Coinbase.Bytes()))
 	return nil, nil
 }
 
 func opTimestamp(pc *uint64, interpreter *EVMInterpreter, callContext *callCtx) ([]byte, error) {
 	v, _ := uint256.FromBig(interpreter.evm.Time)
-	callContext.stack.push(v)
+	callContext.stack.push(*v)
 	return nil, nil
 }
 
 func opNumber(pc *uint64, interpreter *EVMInterpreter, callContext *callCtx) ([]byte, error) {
 	v, _ := uint256.FromBig(interpreter.evm.BlockNumber)
-	callContext.stack.push(v)
+	callContext.stack.push(*v)
 	return nil, nil
 }
 
 func opDifficulty(pc *uint64, interpreter *EVMInterpreter, callContext *callCtx) ([]byte, error) {
 	v, _ := uint256.FromBig(interpreter.evm.Difficulty)
-	callContext.stack.push(v)
+	callContext.stack.push(*v)
 	return nil, nil
 }
 
 func opGasLimit(pc *uint64, interpreter *EVMInterpreter, callContext *callCtx) ([]byte, error) {
-	callContext.stack.push(new(uint256.Int).SetUint64(interpreter.evm.GasLimit))
+	callContext.stack.push(*new(uint256.Int).SetUint64(interpreter.evm.GasLimit))
 	return nil, nil
 }
 
@@ -580,17 +580,17 @@ func opReturnSub(pc *uint64, interpreter *EVMInterpreter, callContext *callCtx) 
 }
 
 func opPc(pc *uint64, interpreter *EVMInterpreter, callContext *callCtx) ([]byte, error) {
-	callContext.stack.push(new(uint256.Int).SetUint64(*pc))
+	callContext.stack.push(*new(uint256.Int).SetUint64(*pc))
 	return nil, nil
 }
 
 func opMsize(pc *uint64, interpreter *EVMInterpreter, callContext *callCtx) ([]byte, error) {
-	callContext.stack.push(new(uint256.Int).SetUint64(uint64(callContext.memory.Len())))
+	callContext.stack.push(*new(uint256.Int).SetUint64(uint64(callContext.memory.Len())))
 	return nil, nil
 }
 
 func opGas(pc *uint64, interpreter *EVMInterpreter, callContext *callCtx) ([]byte, error) {
-	callContext.stack.push(new(uint256.Int).SetUint64(callContext.contract.Gas))
+	callContext.stack.push(*new(uint256.Int).SetUint64(callContext.contract.Gas))
 	return nil, nil
 }
 
@@ -626,7 +626,7 @@ func opCreate(pc *uint64, interpreter *EVMInterpreter, callContext *callCtx) ([]
 	} else {
 		stackvalue.SetBytes(addr.Bytes())
 	}
-	callContext.stack.push(&stackvalue)
+	callContext.stack.push(stackvalue)
 	callContext.contract.Gas += returnGas
 
 	if suberr == ErrExecutionReverted {
@@ -662,7 +662,7 @@ func opCreate2(pc *uint64, interpreter *EVMInterpreter, callContext *callCtx) ([
 	} else {
 		stackvalue.SetBytes(addr.Bytes())
 	}
-	callContext.stack.push(&stackvalue)
+	callContext.stack.push(stackvalue)
 	callContext.contract.Gas += returnGas
 
 	if suberr == ErrExecutionReverted {
@@ -699,7 +699,7 @@ func opCall(pc *uint64, interpreter *EVMInterpreter, callContext *callCtx) ([]by
 	} else {
 		temp.SetOne()
 	}
-	stack.push(&temp)
+	stack.push(temp)
 	if err == nil || err == ErrExecutionReverted {
 		callContext.memory.Set(retOffset.Uint64(), retSize.Uint64(), ret)
 	}
@@ -733,7 +733,7 @@ func opCallCode(pc *uint64, interpreter *EVMInterpreter, callContext *callCtx) (
 	} else {
 		temp.SetOne()
 	}
-	stack.push(&temp)
+	stack.push(temp)
 	if err == nil || err == ErrExecutionReverted {
 		callContext.memory.Set(retOffset.Uint64(), retSize.Uint64(), ret)
 	}
@@ -760,7 +760,7 @@ func opDelegateCall(pc *uint64, interpreter *EVMInterpreter, callContext *callCt
 	} else {
 		temp.SetOne()
 	}
-	stack.push(&temp)
+	stack.push(temp)
 	if err == nil || err == ErrExecutionReverted {
 		callContext.memory.Set(retOffset.Uint64(), retSize.Uint64(), ret)
 	}
@@ -787,7 +787,7 @@ func opStaticCall(pc *uint64, interpreter *EVMInterpreter, callContext *callCtx)
 	} else {
 		temp.SetOne()
 	}
-	stack.push(&temp)
+	stack.push(temp)
 	if err == nil || err == ErrExecutionReverted {
 		callContext.memory.Set(retOffset.Uint64(), retSize.Uint64(), ret)
 	}
@@ -849,18 +849,18 @@ func makeLog(size int) executionFunc {
 	}
 }
 
+var emptyU256 = *new(uint256.Int).SetUint64(0)
+
 // opPush1 is a specialized version of pushN
 func opPush1(pc *uint64, interpreter *EVMInterpreter, callContext *callCtx) ([]byte, error) {
-	var (
-		codeLen = uint64(len(callContext.contract.Code))
-		integer = new(uint256.Int)
-	)
-	*pc += 1
-	if *pc < codeLen {
-		callContext.stack.push(integer.SetUint64(uint64(callContext.contract.Code[*pc])))
-	} else {
-		callContext.stack.push(integer.Clear())
+	tmp := emptyU256
+	ppc := *pc
+	ppc++
+	if int(ppc) < len(callContext.contract.Code) {
+		tmp.SetUint64(uint64(callContext.contract.Code[ppc]))
 	}
+	callContext.stack.push(tmp)
+	*pc = ppc
 	return nil, nil
 }
 
@@ -880,7 +880,7 @@ func makePush(size uint64, pushByteSize int) executionFunc {
 		}
 
 		integer := new(uint256.Int)
-		callContext.stack.push(integer.SetBytes(common.RightPadBytes(
+		callContext.stack.push(*integer.SetBytes(common.RightPadBytes(
 			callContext.contract.Code[startMin:endMin], pushByteSize)))
 
 		*pc += size

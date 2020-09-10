@@ -353,22 +353,29 @@ func (evm *EVM) StaticCall(caller ContractRef, addr common.Address, input []byte
 	if evm.depth > int(params.CallCreateDepth) {
 		return nil, gas, ErrDepth
 	}
-	// We take a snapshot here. This is a bit counter-intuitive, and could probably be skipped.
-	// However, even a staticcall is considered a 'touch'. On mainnet, static calls were introduced
-	// after all empty accounts were deleted, so this is not required. However, if we omit this,
-	// then certain tests start failing; stRevertTest/RevertPrecompiledTouchExactOOG.json.
-	// We could change this, but for now it's left for legacy reasons
-	var snapshot = evm.StateDB.Snapshot()
-
-	// We do an AddBalance of zero here, just in order to trigger a touch.
-	// This doesn't matter on Mainnet, where all empties are gone at the time of Byzantium,
-	// but is the correct thing to do and matters on other networks, in tests, and potential
-	// future scenarios
-	evm.StateDB.AddBalance(addr, big0)
 
 	if p, isPrecompile := evm.precompile(addr); isPrecompile {
 		ret, gas, err = RunPrecompiledContract(p, input, gas)
+
+		if err != nil {
+			if err != ErrExecutionReverted {
+				gas = 0
+			}
+		}
 	} else {
+		// We take a snapshot here. This is a bit counter-intuitive, and could probably be skipped.
+		// However, even a staticcall is considered a 'touch'. On mainnet, static calls were introduced
+		// after all empty accounts were deleted, so this is not required. However, if we omit this,
+		// then certain tests start failing; stRevertTest/RevertPrecompiledTouchExactOOG.json.
+		// We could change this, but for now it's left for legacy reasons
+		var snapshot = evm.StateDB.Snapshot()
+
+		// We do an AddBalance of zero here, just in order to trigger a touch.
+		// This doesn't matter on Mainnet, where all empties are gone at the time of Byzantium,
+		// but is the correct thing to do and matters on other networks, in tests, and potential
+		// future scenarios
+		evm.StateDB.AddBalance(addr, big0)
+
 		// At this point, we use a copy of address. If we don't, the go compiler will
 		// leak the 'contract' to the outer scope, and make allocation for 'contract'
 		// even if the actual execution ends on RunPrecompiled above.
@@ -382,13 +389,15 @@ func (evm *EVM) StaticCall(caller ContractRef, addr common.Address, input []byte
 		// when we're in Homestead this also counts for code storage gas errors.
 		ret, err = run(evm, contract, input, true)
 		gas = contract.Gas
-	}
-	if err != nil {
-		evm.StateDB.RevertToSnapshot(snapshot)
-		if err != ErrExecutionReverted {
-			gas = 0
+
+		if err != nil {
+			evm.StateDB.RevertToSnapshot(snapshot)
+			if err != ErrExecutionReverted {
+				gas = 0
+			}
 		}
 	}
+
 	return ret, gas, err
 }
 
