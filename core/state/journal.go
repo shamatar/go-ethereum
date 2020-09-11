@@ -43,7 +43,8 @@ type journal struct {
 // newJournal create a new initialized journal.
 func newJournal() *journal {
 	return &journal{
-		dirties: make(map[common.Address]int),
+		entries: make([]journalEntry, 0, 1024),
+		dirties: make(map[common.Address]int, 128),
 	}
 }
 

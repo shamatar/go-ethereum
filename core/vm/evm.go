@@ -358,9 +358,13 @@ func (evm *EVM) StaticCall(caller ContractRef, addr common.Address, input []byte
 		ret, gas, err = RunPrecompiledContract(p, input, gas)
 
 		if err != nil {
+			// Snapshot and revert are not needed
 			if err != ErrExecutionReverted {
 				gas = 0
 			}
+		} else {
+			// Perform touch
+			evm.StateDB.Touch(addr)
 		}
 	} else {
 		// We take a snapshot here. This is a bit counter-intuitive, and could probably be skipped.
@@ -374,7 +378,8 @@ func (evm *EVM) StaticCall(caller ContractRef, addr common.Address, input []byte
 		// This doesn't matter on Mainnet, where all empties are gone at the time of Byzantium,
 		// but is the correct thing to do and matters on other networks, in tests, and potential
 		// future scenarios
-		evm.StateDB.AddBalance(addr, big0)
+		evm.StateDB.Touch(addr)
+		// evm.StateDB.AddBalance(addr, big0)
 
 		// At this point, we use a copy of address. If we don't, the go compiler will
 		// leak the 'contract' to the outer scope, and make allocation for 'contract'

@@ -18,6 +18,7 @@
 package state
 
 import (
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"math/big"
@@ -56,6 +57,9 @@ func (n *proofList) Delete(key []byte) error {
 	panic("not supported")
 }
 
+const cacheLimit = 1024
+const limit = 8
+
 // StateDB structs within the ethereum protocol are used to store anything
 // within the merkle trie. StateDBs take care of caching and storing
 // nested states. It's the general query interface to retrieve:
@@ -70,6 +74,9 @@ type StateDB struct {
 	snapDestructs map[common.Hash]struct{}
 	snapAccounts  map[common.Hash][]byte
 	snapStorage   map[common.Hash]map[common.Hash][]byte
+
+	precompilesLimit int
+	precompilesCache [cacheLimit]stateObject
 
 	// This map holds 'live' objects, which will get modified while processing a state transition.
 	stateObjects        map[common.Address]*stateObject
@@ -137,6 +144,18 @@ func New(root common.Hash, db Database, snaps *snapshot.Tree) (*StateDB, error) 
 			sdb.snapStorage = make(map[common.Hash]map[common.Hash][]byte)
 		}
 	}
+
+	// make a cache of precompiles
+	var addr common.Address
+	for i := 0; i < limit; i++ {
+		binary.BigEndian.PutUint16(addr[18:], uint16(i))
+		obj := sdb.GetOrNewStateObject(addr)
+		if obj != nil {
+			sdb.precompilesCache[i] = *obj
+		}
+
+	}
+	sdb.precompilesLimit = limit
 	return sdb, nil
 }
 
@@ -178,6 +197,17 @@ func (s *StateDB) Reset(root common.Hash) error {
 			s.snapStorage = make(map[common.Hash]map[common.Hash][]byte)
 		}
 	}
+
+	// remake a cache of precompiles
+	var addr common.Address
+	for i := 0; i < limit; i++ {
+		binary.BigEndian.PutUint16(addr[18:], uint16(i))
+		obj := s.GetOrNewStateObject(addr)
+		if obj != nil {
+			s.precompilesCache[i] = *obj
+		}
+	}
+
 	return nil
 }
 
@@ -365,6 +395,16 @@ func (s *StateDB) HasSuicided(addr common.Address) bool {
  * SETTERS
  */
 
+// Touch and object at addr
+func (s *StateDB) Touch(addr common.Address) {
+	a := int(addrToUint16(&addr))
+	if a < s.precompilesLimit {
+		return
+	}
+
+	_ = s.GetOrNewStateObject(addr)
+}
+
 // AddBalance adds amount to the account associated with addr.
 func (s *StateDB) AddBalance(addr common.Address, amount *big.Int) {
 	stateObject := s.GetOrNewStateObject(addr)
@@ -497,8 +537,7 @@ func (s *StateDB) getStateObject(addr common.Address) *stateObject {
 // flag set. This is needed by the state journal to revert to the correct s-
 // destructed object instead of wiping all knowledge about the state object.
 func (s *StateDB) getDeletedStateObject(addr common.Address) *stateObject {
-	// Prefer live objects if any is available
-	if obj := s.stateObjects[addr]; obj != nil {
+	if obj := s.getLiveStateObjectIfExists(addr); obj != nil {
 		return obj
 	}
 	// If no live objects are available, attempt to use snapshots
@@ -555,7 +594,31 @@ func (s *StateDB) getDeletedStateObject(addr common.Address) *stateObject {
 }
 
 func (s *StateDB) setStateObject(object *stateObject) {
-	s.stateObjects[object.Address()] = object
+	addr := object.Address()
+	a := int(addrToUint16(&addr))
+	if a < s.precompilesLimit {
+		s.precompilesCache[a] = *object
+		return
+	}
+
+	s.stateObjects[addr] = object
+}
+
+func uint16ToAddr(addr uint16) common.Address {
+	var a common.Address
+	binary.BigEndian.PutUint16(a[18:], addr)
+
+	return a
+}
+
+func addrToUint16(addr *common.Address) uint16 {
+	return binary.BigEndian.Uint16(addr[18:])
+}
+
+func (s *StateDB) TouchPrecompiledObject(addr common.Address, shortAddr uint16) {
+	if int(shortAddr) >= s.precompilesLimit {
+		_ = s.getStateObject(addr)
+	}
 }
 
 // GetOrNewStateObject retrieves a state object or create a new state object if nil.
@@ -661,11 +724,12 @@ func (s *StateDB) Copy() *StateDB {
 		// and in the Finalise-method, there is a case where an object is in the journal but not
 		// in the stateObjects: OOG after touch on ripeMD prior to Byzantium. Thus, we need to check for
 		// nil
-		if object, exist := s.stateObjects[addr]; exist {
+		if object, exist := s.getLiveStateObject(addr); exist {
 			// Even though the original object is dirty, we are not copying the journal,
 			// so we need to make sure that anyside effect the journal would have caused
 			// during a commit (or similar op) is already applied to the copy.
-			state.stateObjects[addr] = object.deepCopy(state)
+			state.setStateObject(object.deepCopy(state))
+			// state.stateObjects[addr] = object.deepCopy(state)
 
 			state.stateObjectsDirty[addr] = struct{}{}   // Mark the copy dirty to force internal (code/state) commits
 			state.stateObjectsPending[addr] = struct{}{} // Mark the copy pending to force external (account) commits
@@ -675,14 +739,16 @@ func (s *StateDB) Copy() *StateDB {
 	// loop above will be a no-op, since the copy's journal is empty.
 	// Thus, here we iterate over stateObjects, to enable copies of copies
 	for addr := range s.stateObjectsPending {
-		if _, exist := state.stateObjects[addr]; !exist {
-			state.stateObjects[addr] = s.stateObjects[addr].deepCopy(state)
+		if object, exist := s.getLiveStateObject(addr); !exist {
+			state.setStateObject(object.deepCopy(state))
+			// state.stateObjects[addr] = s.stateObjects[addr].deepCopy(state)
 		}
 		state.stateObjectsPending[addr] = struct{}{}
 	}
 	for addr := range s.stateObjectsDirty {
-		if _, exist := state.stateObjects[addr]; !exist {
-			state.stateObjects[addr] = s.stateObjects[addr].deepCopy(state)
+		if object, exist := s.getLiveStateObject(addr); !exist {
+			state.setStateObject(object.deepCopy(state))
+			// state.stateObjects[addr] = s.stateObjects[addr].deepCopy(state)
 		}
 		state.stateObjectsDirty[addr] = struct{}{}
 	}
@@ -729,12 +795,33 @@ func (s *StateDB) GetRefund() uint64 {
 	return s.refund
 }
 
+func (s *StateDB) getLiveStateObjectIfExists(addr common.Address) *stateObject {
+	a := int(addrToUint16(&addr))
+	if a < s.precompilesLimit {
+		return &s.precompilesCache[a]
+	}
+
+	obj := s.stateObjects[addr]
+	return obj
+}
+
+func (s *StateDB) getLiveStateObject(addr common.Address) (*stateObject, bool) {
+	a := int(addrToUint16(&addr))
+	if a < s.precompilesLimit {
+		return &s.precompilesCache[a], true
+	}
+
+	obj, exist := s.stateObjects[addr]
+	return obj, exist
+}
+
 // Finalise finalises the state by removing the s destructed objects and clears
 // the journal as well as the refunds. Finalise, however, will not push any updates
 // into the tries just yet. Only IntermediateRoot or Commit will do that.
 func (s *StateDB) Finalise(deleteEmptyObjects bool) {
 	for addr := range s.journal.dirties {
-		obj, exist := s.stateObjects[addr]
+		obj, exist := s.getLiveStateObject(addr)
+		// obj, exist := s.stateObjects[addr]
 		if !exist {
 			// ripeMD is 'touched' at block 1714175, in tx 0x1237f737031e40bcde4a8b7e717b2d15e3ecadfe49bb1bbc71ee9deb09c6fcf2
 			// That tx goes out of gas, and although the notion of 'touched' does not exist there, the
@@ -774,7 +861,8 @@ func (s *StateDB) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
 	s.Finalise(deleteEmptyObjects)
 
 	for addr := range s.stateObjectsPending {
-		obj := s.stateObjects[addr]
+		obj := s.getLiveStateObjectIfExists(addr)
+		// obj := s.stateObjects[addr]
 		if obj.deleted {
 			s.deleteStateObject(obj)
 		} else {
@@ -819,7 +907,7 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (common.Hash, error) {
 	// Commit objects to the trie, measuring the elapsed time
 	codeWriter := s.db.TrieDB().DiskDB().NewBatch()
 	for addr := range s.stateObjectsDirty {
-		if obj := s.stateObjects[addr]; !obj.deleted {
+		if obj := s.getLiveStateObjectIfExists(addr); !obj.deleted {
 			// Write any contract code associated with the state object
 			if obj.code != nil && obj.dirtyCode {
 				rawdb.WriteCode(codeWriter, common.BytesToHash(obj.CodeHash()), obj.code)
